@@ -8,15 +8,29 @@
 </head>
 <body>
     <h1>Welcome to My Flask Blog!</h1>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
     {% for post in posts %}
     <div class="post">
         <h2>{{ post['title'] }}</h2>
         <p><em>Written by {{ post['author'] }}</em></p>
         <p>{{ post['content'] }}</p>
-        <form action="/delete/{{ post['id'] }}" method="POST">
-            <input type="submit" value="Delete">
+        <form action="{{ url_for('delete', post_id=post['id']) }}" method="POST">
+            <button type="submit" class="delete-btn">Delete</button>
         </form>
+        <a href="{{ url_for('update', post_id=post['id']) }}">Update</a>
     </div>
     {% endfor %}
+
+    <a href="{{ url_for('add') }}">Add a Blog Post</a>
 </body>
 </html>

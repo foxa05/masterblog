@@ -1,24 +1,8 @@
-from flask import Flask, render_template, request, redirect, flash, jsonify
+from flask import Flask, render_template, request, redirect, flash
 import json
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Set a secret key for flash messages
-
-posts = []
-
-
-@app.route('/blog-posts', methods=['GET', 'POST'])
-def get_blog_posts():
-    with open('blog_posts.json', 'r') as json_file:
-        blog_posts = json.load(json_file)
-    return jsonify(blog_posts)
-
-
-# Save the data structure as a JSON file
-def save_blog_posts(posts):
-    with open('blog_posts.json', 'w') as json_file:
-        json.dump(posts, json_file)
-
 
 # Example blog posts
 blog_posts = [
@@ -36,8 +20,35 @@ blog_posts = [
     }
 ]
 
-# Save the initial blog posts
-save_blog_posts(blog_posts)
+
+def save_blog_posts(posts):
+    with open('blog_posts.json', 'w') as json_file:
+        json.dump(posts, json_file)
+
+
+def fetch_post_by_id(post_id):
+    for post in blog_posts:
+        if post['id'] == post_id:
+            return post
+    return None
+
+
+def update_post(post_id, title, author, content):
+    for post in blog_posts:
+        if post['id'] == post_id:
+            post['title'] = title
+            post['author'] = author
+            post['content'] = content
+            save_blog_posts(blog_posts)
+            break
+
+
+def delete_post(post_id):
+    for post in blog_posts:
+        if post['id'] == post_id:
+            blog_posts.remove(post)
+            save_blog_posts(blog_posts)
+            break
 
 
 @app.route('/')
@@ -47,42 +58,49 @@ def index():
 
 @app.route('/add', methods=['GET', 'POST'])
 def add():
-    global blog_posts  # Include the global keyword to access the variable from outer scope
-
     if request.method == 'POST':
-        # Get the form data
         title = request.form.get('title')
-        content = request.form.get('content')
+        writer = request.form.get('writer')
+        data = request.form.get('data')
 
-        # Create a new blog post
         new_post = {
-            'id': len(blog_posts) + 1,  # Generate a new ID for the post
+            'id': len(blog_posts) + 1,
             'title': title,
-            'content': content
+            'author': writer,
+            'content': data
         }
-
-        blog_posts.append(new_post)  # Add the new post to the list
-        save_blog_posts(blog_posts)  # Save the updated posts
-
-        flash('Blog post added successfully.')  # Display flash message
+        blog_posts.append(new_post)
+        save_blog_posts(blog_posts)
+        flash('Blog post added successfully.')
         return redirect('/')
 
     return render_template('add.html')
 
 
-
-@app.route('/delete/<int:post_id>')
+@app.route('/delete/<int:post_id>', methods=['GET', 'POST'])
 def delete(post_id):
-    # Find the blog post with the given id and remove it from the list
-    for post in blog_posts:
-        if post['id'] == post_id:
-            blog_posts.remove(post)
-            save_blog_posts(blog_posts)  # Save the updated posts
-            flash('Blog post deleted successfully.')  # Display flash message
-            break  # Exit the loop once the post is found and removed
+    if request.method == 'POST':
+        delete_post(post_id)
+        flash('Blog post deleted successfully.')
 
     return redirect('/')
 
+
+@app.route('/update/<int:post_id>', methods=['GET', 'POST'])
+def update(post_id):
+    post = fetch_post_by_id(post_id)
+
+    if post is None:
+        return redirect('/add')
+
+    if request.method == 'POST':
+        title = request.form.get('title')
+        author = request.form.get('author')
+        content = request.form.get('content')
+        update_post(post_id, title, author, content)
+        return redirect('/')
+
+    return render_template('update.html', post=post)
 
 
 if __name__ == '__main__':
